@@ -1,2 +1,4 @@
 # AuthMe.sk
-This is currently a work in progress.
+Version 2.0
+
+Please refer to the Wiki for documentation!
