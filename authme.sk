@@ -1,273 +1,163 @@
-#AUTHME.sk by PANDADEVS
-
-#    Copyright (C) 2017  Brian Tan
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-#█▀▀█ █  █ ▀▀█▀▀ █  █ █▀▄▀█ █▀▀
-#█▄▄█ █  █   █   █▀▀█ █ ▀ █ █▀▀
-#█  █  ▀▀▀   ▀   ▀  ▀ ▀   ▀ ▀▀▀
+#▄▀█ █ █ ▀█▀ █ █ █▀▄▀█ █▀▀
+#█▀█ █▄█  █  █▀█ █ ▀ █ ██▄
 
 #by PandaDevs
-
 #Fancy text generator: http://fsymbols.com/generators/tarty/
 
-#What is two-factor authentication?
-#Security is a major problem in the internet world. So, in 1984, two-factor authentication, or 2FA; this
-#security technology was patented to require users to use two forms of verification of identity to login,
-#access certain databases, etc. On typical websites, this requires a user to enter their password, then
-#go into their emails to click a "link" which will allow them to enter their account.
+#Changelog
+#v2.0
+#Massively revamped security by changing to base-32 from plain text
+#Friendlier interface
+#Smashed bugs in the process
+#
+#TODO:
+#Create customizable yml
+#Add QR feature
 
-#What is Authme.sk?
-#This is a play-on-words on the already existing Skript add-on, AuthMe. Instead of requiring dependencies,
-#this Skript does not require ANY dependencies (that is, of course, you do not select the GUI option). (coming soon!)
-#This is a 2FA plugin for your staff members so that even if their accounts get hacked, hackers are required
-#to use the password staff set on join in order to access major commands that can potentially hurt the server.
+#depends skLib, skUtilities, skQuery
 
-#General Configuration- follow all instructions!
-
+#change these if you know what you are doing.
 options:
-    prefix: &9&k;;;&a&l2FA&9&k;;;&r                                                             #What do you want the plugin prefix to be?
-    perm: auth.me                                                                               #What do you want the plugin main permission to be?
-    admin: auth.me.admin                                                                        #What do you want the plugin override permission to be?
-                                                                                                    #Note: This permission node allows the player to reset other's 2FAs and override the process!
-                                                                                                    #Player must have auth.me node in order to access commands!
-    noperm: &fUnknown command. Type ""/help"" for help.                                         #If a player does not have permission to access 2FA, what should be the no perm message be?
-                                                                                                    #Note: To use a prefix, use the syntax {@prefix}
-    invsyn: &8&l> &cInvalid syntax.                                                             #If a player uses incorrect syntax, what should the message be?
-    max: 3                                                                                      #How many tries should a player get before he is kicked?
-    
-#NON-CONFIGURABLE: DO NOT EDIT
-    amver: 1.0
-    channel: empirical
-    
-#and the code begins!
+    version: 2.0 # do not change
+    prefix: &1&lAuthMe &8&l»&r
+    fjw: &fThis server has enabled 2FA for the server. Please set it up now. &e/2fa
+    auth: &fPlease authenticate your session. (Enter your key...) &e/2fa (key)
+    pass: &aAuthenticated!
+    fail: &4Incorrect code, please try again. &e/2fa (key)
+    noperm: &cYou do not have permission to execute that command. If you believe this is in error, please contact a server administrator.
+    error: &4Fatal error. Please alert a server administrator immediately.
 
-#events
+#plugin load
 on load:
-    if {authme.settings.2fa} isn't set:
-        set {authme.settings.2fa} to true
-    if {authme.settings.override} isn't set:
-        set {authme.settings.override} to false
+    if file "plugins/AuthMe/config.yml" does not exist:
+        create file "plugins/AuthMe/config.yml"
+        set skutil yml value "AUTHME.Enable" from file "plugins/AuthMe/config.yml" to true
+        set skutil yml value "SERVER.Name" from file "plugins/AuthMe/config.yml" to "Server Name"
+        set skutil yml value "SERVER.Site" from file "plugins/AuthMe/config.yml" to "www.serverwebsitehere.net"
+        # vvv !!!!! DO NOT CHANGE THIS !!!!! vvv
+        set skutil yml value "SKRIPT.File-Name" from file "plugins/AuthMe/config.yml" to "AuthMe"
+        set skutil yml value "SKRIPT.Updates" from file "plugins/AuthMe/config.yml" to true
+    set {OPTIONS::AUTHME::Enable} to yml value "AUTHME.Enable" of file "plugins/AuthMe/config.yml"
+    set {OPTIONS::SERVER::Name} to yml value "SERVER.Name" of file "plugins/AuthMe/config.yml"
+    set {OPTIONS::SERVER::Site} to yml value "SERVER.Site" of file "plugins/AuthMe/config.yml"
+    set {OPTIONS::SKRIPT::File-Name} to yml value "SKRIPT.File-Name" of file "plugins/AuthMe/config.yml"
+    set {OPTIONS::SKRIPT::Updates} to yml value "SKRIPT.Updates" of file "plugins/AuthMe/config.yml"
+    
+#config check
+on load:
+    if skutil yml value "AUTHME.Enable" from file "plugins/AuthMe/config.yml" is true:
+        stop
+    if skutil yml value "AUTHME.Enable" from file "plugins/AuthMe/config.yml" is false:
+        stop
+    else:
+        set skutil yml value "AUTHME.Enable" from file "plugins/AuthMe/config.yml" to true
 
-on first join:
-    if player has permission "{@perm}":
-        if {authme.settings.override} is false:
-            message "{@prefix} &8&l> &7Your 2FA password isn't set!"
-            message "&7Please set it now for security purposes!"
-        
+#load console output
+on skript load:
+    send "▄▀█ █ █ ▀█▀ █ █ █▀▄▀█ █▀▀" to console
+    send "█▀█ █▄█  █  █▀█ █ ▀ █ ██▄" to console
+    send "version &d{@version}" to console
+    send "" to console
+    send "by &bPandaDevs" to console
+    send "" to console
+    if {OPTIONS::SKRIPT::UPDATE} is true:
+        if text from "https://pastebin.com/yFXVUj9N" is not "{@version}":
+            set {_uv} to text from "https://pastebin.com/yFXVUj9N"
+            send "You are currently running:     version &e{@version}" to console
+            send "There's an update available:   version &a%{_uv}%" to console
+            send "Get it here: add link here" to console
+            send "" to console
+    wait 2 seconds
+    send "{@prefix}&aauthme.sk was successfully loaded!" to console
+
+#listeners
 on join:
-    if player has permission "{@perm}":
-        if {authme.settings.override} is false:
-            if {authme.%player%} is set:
-                apply blindness 100 to the player
-                apply slowness 100 to the player
-                apply resistance 100 to the player
-                apply mining fatigue 100 to the player
-                message "{@prefix} &8&l> &7Please enter your 2FA password."
-                message "&7Or, ask an administrator to reset your password."
-                set {authme.chat.check.%player%} to true
-            else:
-                message "{@prefix} &8&l> &7Your 2FA password isn't set!"
-                message "&7Please set it now for security purposes!"
-                
-on chat:
-    if {authme.chat.check.%player%} is true:
-        set {_m} to message
-        set {_c} to 0
-        if {_m} is {authme.%player%}:
-            cancel event
-            remove blindness from player
-            remove slowness from player
-            remove resistance from player
-            remove mining fatigue from player
-            set {authme.chat.check.%player%} to false
-            message "{@prefix} &8&l> &7You have been successfully logged in."
+    wait 5 ticks
+    if player has permission "authme.2fa":
+        if {authme.key.%uuid of player%} is set:
+            set {authme.unlock.%uuid of player%} to false
+            apply slowness 999 to player for 24 hours
+            apply blindness 999 to player for 24 hours
+            send "{@prefix} {@auth}"
         else:
-            if {_c} isn't "{@max}":
-                cancel event
-                add 1 to {_c}
-                set {_d} to ({_c} - 1)
-                message "{@prefix} &8&l> &7Incorrect password. You have %{_d}% tries left."
-                delete {_d}
-            else:
-                cancel event
-                delete {_c}
-                delete {_d}
-                set {authme.chat.check.%player%} to false
-                kick player due to "{@prefix} &8&l> &7You have failed the two-factor authentication."
-    if {authme.chat.set.%player%} is true:
-        if message is "cancel":
-            cancel event
-            delete {authme.chat.set.%player%}
-            message "{@prefix} &8&l> &4&lCancelled."
-        else:
-            cancel event
-            set {authme.%player%} to message
-            delete {authme.chat.set.%player%}
-            message "{@prefix} &8&l> &7Your password has been set! Do not lose it!"
-    if {authme.chat.reset.check.%player%} is true:
-        if message is "cancel":
-            cancel event
-            delete {authme.chat.reset.check.%player%}
-            message "{@prefix} &8&l> &4&lCancelled."
-        else:
-            set {_rc} to message
-            if {_rc} is {authme.%player%}:
-                cancel event
-                delete {authme.chat.reset.check.%player%}
-                delete {authme.%player%}
-                message "{@prefix} &8&l> &7Please set your password for two-factor authentication."
-                message "&7Keep this password in a safe place, and do not lose it!"
-                message "{@prefix} &7Type &4&lcancel &7to cancel this process!"
-                set {authme.chat.set.%player%} to true
-            else:
-                cancel event
-                message "{@prefix} &8&l> &7Incorrect password. Please try again."
-    if {authme.chat.reset.others.%player%} is true:
-        if message is "cancel":
-            cancel event
-            delete {roa}
-            delete {authme.chat.reset.others.%player%}
-            message "{@prefix} &8&l> &4&lCancelled."
-        else:
-            cancel event
-            set {_ro} to message
-            set {authme.%{roa}%} to {_ro}
-            delete {roa}
-            delete {authme.chat.reset.others.%player%}
-            message "{@prefix} &8&l> &7Your password has been set! Do not lose it!"
-            
-on click:
-    if {authme.chat.check.%player%} is true:
-        cancel event
+            stop
 
-#base
-command /2fa [<text>] [<text>] [<text>]:
-    description: Access two-factor authentication commands.
-    aliases: /twofactorauthentication, /2factor, /authme
+on command:
+    if {authme.unlock.%uuid of player%} is false:
+        if executor is player:
+            if command is not "2fa":
+                cancel event
+                send "{@prefix} {@auth}"
+
+on chat:
+    if {authme.unlock.%uuid of player%} is false:
+        cancel event
+        send "{@prefix} {@auth}"
+        
+#in case you fuck up
+command /2fareset <offline player>:
+    description: OP only usage to reset a player's 2FA if they get locked out.
+    permission: op
+    permission message: {@noperm}
     trigger:
-        if {authme.settings.2fa} is true:
-            if player has permission "{@perm}":
-                if arg 1 isn't set:
-                    message "{@prefix} version {@amver}"
-                    message "&3List of all commands:"
-                    message "&e/2fa &8&l> &7List all commands."
-                    message "&e/2fa set &8&l> &7Set your password."
-                    message "&e/2fa reset [player] &8&l> &7Reset your or another player's password."
-                    message "&e/2fa settings [string] [string] &8&l> &7Change authentication settings."
-                else if arg 1 is "help" or "?":
-                    message "{@prefix} version {@amver}"
-                    message "&3List of all commands:"
-                    message "&e/2fa &8&l> &7List all commands."
-                    message "&e/2fa set &8&l> &7Set your password."
-                    message "&e/2fa reset [player] &8&l> &7Reset your or another player's password."
-                    message "&e/2fa settings [string] [string] &8&l> &7Change authentication settings."
-                else if arg 1 is "set":
-                    if {authme.%player%} isn't set:
-                        if {authme.settings.override} is false:
-                            message "{@prefix} &8&l> &7Please set your password for two-factor authentication in the chat!"
-                            message "&7Keep this password in a safe place, and do not lose it!"
-                            message "&7Type &4&lcancel &7to cancel this process!"
-                            set {authme.chat.set.%player%} to true
+        delete {authme.key.%uuid of arg 1%}
+        set {authme.unlock.%uuid of arg 1%} to true
+        delete {authme.fjw.%uuid of arg 1%}
+        send "{@prefix} &aYou have successfully reset %arg 1%'s 2FA!"
+
+#the one and only command
+command /2fa [<string>] [<string>]:
+    description: A two-factor authorization solution for your server
+    trigger:
+        if sender is console:
+            send "{@prefix} &cThis feature is intended for player usage only!"
+        else if player has permission "authme.2fa":
+            if {OPTIONS::AUTHME::ENABLE} is true:
+                if {authme.key.%uuid of player%} is not set:
+                    if {authme.fjw.%uuid of player%} is not set: #first join warn
+                        send "{@prefix} {@fjw}"
+                        set {authme.fjw.%uuid of player%} to true
+                        stop
+                    else:
+                        #syntax: set {_localvar} to [a] new (two|2)[( |-)]factor [base[( |-)]32] secret code
+                        #notes: time-based otp generates secret.
+                        send "{@prefix} &aGenerating client secret..."
+                        set {_clientSecret} to a new two-factor base-32 secret code
+                        wait 5 ticks
+                        send "{@prefix} &aSaving secret..."
+                        set {authme.key.%uuid of player%} to {_clientSecret}
+                        wait 5 ticks
+                        send "{@prefix} &aA secret has been successfully generated!"
+                        send "{@prefix} &fPlease enter this secret into your two-factor authentication app: &d%{_clientSecret}%"
+                        #make player execute command "/tellraw @s {"text":"Click here to copy the secret to clipboard.","clickEvent":{"action":"open_url","value":"%{authme.key.%uuid of player%}%"}}"
+                        #future update for copy and paste this currently does not work
+                        send "{@prefix} &fPlease execute the command &e/2fa (key)&f now to finish setting up 2FA."
+                        send "{@prefix} &fIf you are encountering problems while setting up 2FA, please contact a server administrator."
+                        send "{@prefix} &f&oA default fail message will appear; please disregard the message below until you have executed &e/2fa (key)&f."
+                        set {_k} to arg 1 parsed as an integer
+                        if {_k} is a number:
+                            send "{@prefix} {@pass}"
+                            wait 5 ticks
+                            set {authme.key.%uuid of player%} to skutil hashed arg 1 using "MD5"
+                            set {authme.unlock.%uuid of player%} to true
                         else:
-                            if player has permission "{@admin}":
-                                message "{@prefix} &8&l> &7Since you are an admin, you do not need to set a password! Yay!"
-                            else:
-                                message "{@prefix} &8&l> &7Please set your password for two-factor authentication in the chat!"
-                                message "&7Keep this password in a safe place, and do not lose it!"
-                                message "&7Type &4&lcancel &7to cancel this process!"
-                                set {authme.chat.set.%player%} to true
-                    else:
-                        message "{@prefix} &8&l> &7Your password has already been set! Reset it using &e/2fa reset&7."
-                else if arg 1 is "reset":
-                    if arg 2 isn't set:
-                        message "{@prefix} &8&l> &7Please enter your current password for two-factor authentication in the chat!"
-                        message "&7Type &4&lcancel &7to cancel this process!"
-                        set {authme.chat.reset.check.%player%} to true
-                    else:
-                        if player has permission "{@admin}":
-                            message "{@prefix} &8&l> &7Please set the password for %arg 2% for two-factor authentication in the chat!"
-                            message "&7Keep this password in a safe place, and do not lose it!"
-                            message "&7Type &4&lcancel &7to cancel this process!"
-                            set {authme.chat.reset.others.%player%} to true
-                            set {roa} to arg 2
-                        else:
-                            message "{@noperm}"
-                else if arg 1 is "settings":
-                    if player has permission "{@admin}":
-                        if arg 2 isn't set:
-                            message "&e/2fa settings 2fa [boolean] &8&l> &7Enable or disable 2FA."
-                            message "&e/2fa settings override [boolean] &8&l> &7Enable or disable players with permission node ""{@admin}"" requirement for 2FA"
-                        else if arg 2 is "2fa":
-                            if arg 3 isn't set:
-                                message "{@prefix} {@invsyn} &e<true|false>"
-                            else if arg 3 is "true":
-                                message "{@prefix} &8&l> &7Two-factor authentication has been enabled."
-                                set {authme.settings.2fa} to true
-                            else if arg 3 is "false":
-                                message "{@prefix} &8&l> &7Two-factor authentication has been disabled."
-                                set {authme.settings.2fa} to false
-                            else:
-                                message "{@prefix} {@invsyn} &e<true|false>"
-                        else if arg 2 is "override":
-                            if arg 3 isn't set:
-                                message "{@prefix} {@invsyn} &e<true|false>"
-                            else if arg 3 is "true":
-                                message "{@prefix} &8&l> &72FA override enabled!"
-                                message "&7Players with permission ""{@admin}"" do not require a password!"
-                                set {authme.settings.override} to true
-                            else if arg 3 is "false":
-                                message "{@prefix} &8&l> &72FA override disabled!"
-                                message "&7Players with permission ""{@admin}"" will require a password to access in-game commands!"
-                                set {authme.settings.override} to false
-                            else:
-                                message "{@prefix} {@invsyn} &e<true|false>"
-                    else:
-                        message "{@noperm}"
+                            send "{@prefix} {@fail}"
                 else:
-                    message "{@noperm}"
+                    set {_c} to the current two-factor code of secret code {authme.key.%uuid of player%}
+                    set {_k} to arg 1 parsed as an integer
+                    if {_k} is a number:
+                        if {_c} is arg 1:
+                            send "{@prefix} {@pass}"
+                            wait 20 ticks
+                            remove slowness from player
+                            remove blindness from player
+                            set {authme.unlock.%uuid of player%} to true
+                            send "{@prefix} %sender% has just authenticated their session!" to console
+                        else:
+                            send "{@prefix} {@fail}"
+                    else:
+                        send "{@prefix} {@fail}"
             else:
-                message "{@noperm}"
+                send "&fUnknown command. Type '/help' for help."
         else:
-            if arg 1 is "settings":
-                if player has permission "{@admin}":
-                    if arg 2 isn't set:
-                        message "&e/2fa settings 2fa [boolean] &8&l> &7Enable or disable 2FA."
-                        message "&e/2fa settings override [boolean] &8&l> &7Enable or disable players with permission node ""{@admin}"" requirement for 2FA"
-                    else if arg 2 is "2fa":
-                        if arg 3 isn't set:
-                            message "{@prefix} {@invsyn} &e<true|false>"
-                        else if arg 3 is "true":
-                            message "{@prefix} &8&l> &7Two-factor authentication has been enabled."
-                            set {authme.settings.2fa} to true
-                        else if arg 3 is "false":
-                            message "{@prefix} &8&l> &7Two-factor authentication has been disabled."
-                            set {authme.settings.2fa} to false
-                        else:
-                            message "{@prefix} {@invsyn} &e<true|false>"
-                    else if arg 2 is "override":
-                        if arg 3 isn't set:
-                            message "{@prefix} {@invsyn} &e<true|false>"
-                        else if arg 3 is "true":
-                            message "{@prefix} &8&l> &72FA override enabled!"
-                            message "&7Players with permission ""{@admin}"" do not require a password!"
-                            set {authme.settings.override} to true
-                        else if arg 3 is "false":
-                            message "{@prefix} &8&l> &72FA override disabled!"
-                            message "&7Players with permission ""{@admin}"" will require a password to access in-game commands!"
-                            set {authme.settings.override} to false
-                        else:
-                            message "{@prefix} {@invsyn} &e<true|false>"
-                else:
-                    message "{@noperm}"
-            else:
-                message "{@noperm}"
+            send "{@noperm}" to player
