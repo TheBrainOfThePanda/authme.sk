@@ -1,0 +1,8 @@
+AUTHME:
+  Enable: true
+SERVER:
+  Name: Server Name
+  Site: www.serverwebsitehere.net
+SKRIPT:
+  File-Name: AuthMe
+  Updates: true
